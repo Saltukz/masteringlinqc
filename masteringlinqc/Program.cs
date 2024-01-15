@@ -202,3 +202,164 @@ people1.GroupJoin(records, x => x.Email, y => y.Mail, (person, recs) => new
 
 foreach (var grp in people1)
     Console.WriteLine(grp);
+
+//first last single elementat
+
+var numbers4 = new List<int> { 1, 2, 3 };
+
+//invalid operation exception
+//numbers.First(x => x > 10);
+
+//returns default value if not match which is zero for int
+numbers.FirstOrDefault(x => x > 10);
+
+//same operations like first
+numbers.Last(x => x < 10);
+
+//sequnce contains more than one element
+//var sigleObj = new int[] { 123, 45 }.Single();
+
+//0 if empty if 1 returns single other situations exception
+//var sigleOrObj = new int[] { 123, 45 }.SingleOrDefault();
+
+// like [0]
+numbers4.ElementAt(0);
+
+// not expcetion if range has been
+numbers4.ElementAtOrDefault(5);
+
+//concatenation
+
+var integralTypes = new[] { typeof(int), typeof(short) };
+var fpTypes = new[] { typeof(float), typeof(double) };
+
+//concat 2 types as a one new type
+integralTypes.Concat(fpTypes).Prepend(typeof(bool));
+
+//Statical Functions
+var numbersStatical = Enumerable.Range(1, 10);
+
+//sum
+//1 2 3 4 5 ...
+// 1 2 -> 3
+// 3 3 -> 6
+numbersStatical.Aggregate((p, x) => p + x);
+//same
+numbersStatical.Sum();
+// 1 1 -> 1
+// 1 2 -> 2
+// 2 3 -> 6
+
+numbersStatical.Aggregate(1, (p, x) => p * x);
+
+//avarage
+numbersStatical.Average();
+
+//comma between
+
+var wordsAggregate = new[] { "one", "two", "three" };
+wordsAggregate.Aggregate((p, x) => p + "," + x);
+
+//ParalelLinq
+
+const int count = 50;
+
+var items = Enumerable.Range(1, count).ToArray();
+
+var resultsParalel = new int[count];
+
+items.AsParallel().ForAll(x =>
+{
+    int newValue = x * x * x;
+    Console.WriteLine($"{newValue},({Task.CurrentId})\t");
+    resultsParalel[x - 1] = newValue;
+});
+
+//foreach (var item in resultsParalel)
+//{
+//    Console.WriteLine(item);
+//}
+
+var cubes = items.AsParallel().AsOrdered().Select(x => x * x * x);
+
+foreach (var item in cubes)
+{
+    Console.WriteLine(item);
+}
+
+//Cancelation and Exception
+
+var cts = new CancellationTokenSource();
+var itemsCan = ParallelEnumerable.Range(1, 20);
+
+var resultsCan = itemsCan.WithCancellation(cts.Token).Select(i =>
+{
+    double result = Math.Log10(i);
+
+    if (result > 2)
+    {
+        throw new InvalidOperationException();
+    }
+    Console.WriteLine($"i = {i},taskid = {Task.CurrentId}");
+    return result;
+});
+
+try
+{
+    foreach (var c in resultsCan)
+    {
+        if (c > 1)
+        {
+            cts.Cancel();
+        }
+        Console.WriteLine($"result = {c}");
+    }
+}
+catch (AggregateException ae)
+{
+    ae.Handle(e =>
+    {
+        Console.WriteLine($"{e.GetType().Name} : {e.Message}");
+        return true;
+    });
+}
+catch (OperationCanceledException e)
+{
+    Console.WriteLine("Canceled");
+}
+
+//MergeOptions
+
+var numbersMerge = ParallelEnumerable.Range(1, 20).ToArray();
+
+var resultsMerge = numbersMerge
+    .AsParallel()
+    .WithMergeOptions(ParallelMergeOptions.FullyBuffered)
+    .Select(x =>
+    {
+        var result = Math.Log10(x);
+        Console.WriteLine($"Produced {result}");
+        return result;
+    });
+
+foreach (var res in resultsMerge)
+{
+    Console.WriteLine($"Consumed {res}");
+}
+
+//CustomAggregation
+
+var sum = ParallelEnumerable.Range(1, 1000)
+    .Aggregate(0, (partialSUm, i) => partialSUm += 1, (total, subTotal) => total += subTotal, i => i);
+
+internal static class ExtensionMethods
+{
+    public static IEnumerable<T> Prepend<T>(this IEnumerable<T> values, T value)
+    {
+        yield return value;
+        foreach (var item in values)
+        {
+            yield return item;
+        }
+    }
+}
